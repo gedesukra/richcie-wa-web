@@ -10,9 +10,9 @@ interface MyProps {
 }
 
 interface MyState {
+  emailValid: boolean,
   loginData: {
     email: string,
-    emailValid: boolean,
     password: string,
   }
 }
@@ -21,9 +21,9 @@ class App extends Component<MyProps, MyState> {
   constructor(props: any) {
     super(props)
     this.state = {
+      emailValid: true,
       loginData: {
         email: "",
-        emailValid: true,
         password: ""
       }
     }
@@ -44,20 +44,14 @@ class App extends Component<MyProps, MyState> {
     }
     if(regexp.test(this.state.loginData.email)) {
       this.setState({
-        loginData: {
-          ...this.state.loginData,
-          emailValid: true,
-        }
+        emailValid: true,
       })
       await fetch(url, requestOpt)
         .then((res) => console.log(res))
       
     } else {
       this.setState({
-        loginData: {
-          ...this.state.loginData,
-          emailValid: false,
-        }
+        emailValid: false,
       })
     }
   }
@@ -69,7 +63,6 @@ class App extends Component<MyProps, MyState> {
       ...this.state.loginData,
       [type]: value
     }});
-    
   }
 
   render() {
@@ -92,7 +85,7 @@ class App extends Component<MyProps, MyState> {
                 <Input
                     bsSize="sm"
                     placeholder="enter email"
-                    invalid={!this.state.loginData.emailValid}
+                    invalid={!this.state.emailValid}
                     onChange={(e) => this.handleChange(e, "email")}
                 />
                 <Input
