@@ -14,7 +14,7 @@ class App extends PureComponent {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/Office" element={<Office />} />
+        <Route path="/office" element={<Office />} />
       </Routes>
     </BrowserRouter>
     )
