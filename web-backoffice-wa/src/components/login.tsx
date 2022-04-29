@@ -1,54 +1,86 @@
 import { Component } from 'react'
+import { Config } from '../model/requestModel'
 
-import {Card, CardBody, Input, CardTitle, Button, Navbar, NavbarBrand, NavbarToggler} from 'reactstrap'
+import {Spinner, Card, CardBody, Input, CardTitle, Button, Navbar, NavbarBrand, NavbarToggler} from 'reactstrap'
 
 import '../css/login.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-interface MyProps {
-
+// data structure
+const loginStructure = {
+  loginData: {
+    email: "",
+    password: ""
+  },
+  loginResponse: {
+    status: false,
+    msg: "",
+  }
 }
 
-interface MyState {
+// component interface
+interface LoginProps {
+  handleLogin: (result: boolean) => void,
+}
+
+interface LoginState {
   emailValid: boolean,
+  loading: boolean,
   loginData: {
     email: string,
     password: string,
   }
+  loginResponse: {
+    status: boolean,
+    msg: string,
+  }
 }
 
-class App extends Component<MyProps, MyState> {
+class LoginComponent extends Component<LoginProps, LoginState> {
   constructor(props: any) {
     super(props)
     this.state = {
       emailValid: true,
+      loading: false,
       loginData: {
-        email: "",
-        password: ""
+        ...loginStructure.loginData
+      },
+      loginResponse: {
+        ...loginStructure.loginResponse
       }
     }
   }
 
+  shouldComponentUpdate(nextProps: any, nextStates: any) {
+    if(
+      this.state.emailValid !== nextStates.emailValid ||
+      this.state.loading !== nextStates.loading ||
+      this.state.loginResponse !== nextStates.loginResponse) {
+        return true
+      }
+      return false
+  }
+
   async login() {
-    const regexp : RegExp = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+    const regexp : RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
     const url = "http://localhost:8080/loginAdmin"
-    const requestOpt = {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...this.state.loginData
-      })
-    }
     if(regexp.test(this.state.loginData.email)) {
       this.setState({
+        loading: true,
         emailValid: true,
       })
-      await fetch(url, requestOpt)
-        .then((res) => console.log(res))
-      
+      await fetch(url, Config("POST", this.state.loginData))
+        .then(response => response.json())
+        .then(data => {
+          this.setState({
+            loading: false,
+            loginResponse:  {
+              status: data["status"],
+              msg: data["msg"]
+            }
+          })
+          this.props.handleLogin(data["status"])
+        })
     } else {
       this.setState({
         emailValid: false,
@@ -66,6 +98,26 @@ class App extends Component<MyProps, MyState> {
   }
 
   render() {
+    // spinner
+    let spinner = <></>
+    if(this.state.loading) {
+      spinner = (
+        <Spinner color="primary" className="spinner">
+          Loading...
+        </Spinner>
+      )
+    }
+    if(!this.state.loading && this.state.loginResponse.msg.length > 0) {
+      const loginValid: boolean = this.state.loginResponse.status
+      spinner = (
+        <CardTitle tag="h6" style={{"color": loginValid ? "black" : "red"}}>
+          <b>
+            {this.state.loginResponse.msg} 
+          </b>
+        </CardTitle>
+      )
+    }
+
     return (
     <div className='text-center'>
         <Navbar
@@ -81,7 +133,7 @@ class App extends Component<MyProps, MyState> {
         <div>
             <Card body outline className='loginForm'>
                 <CardBody>
-                <CardTitle tag="h5"> Admin login backoffice </CardTitle>
+                <CardTitle tag="h5">Admin login backoffice</CardTitle>
                 <Input
                     bsSize="sm"
                     placeholder="enter email"
@@ -99,6 +151,7 @@ class App extends Component<MyProps, MyState> {
                     Login
                 </Button>
                 </CardBody>
+                {spinner}
             </Card>
         </div>
     </div>
@@ -106,5 +159,5 @@ class App extends Component<MyProps, MyState> {
   }
 }
 
-export const Login = App;
+export const Login = LoginComponent;
 

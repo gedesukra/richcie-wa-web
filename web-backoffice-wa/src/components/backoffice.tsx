@@ -9,4 +9,4 @@ class BackOffice extends Component {
 
 }
 
-export const Office = BackOffice
+export const Dashboard = BackOffice

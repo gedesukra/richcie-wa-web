@@ -6,3 +6,7 @@
 .loginButton {
     width: 100%;
 }
+
+.spinner {
+    margin: auto;
+}
