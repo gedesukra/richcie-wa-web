@@ -1,0 +1,12 @@
+.buttonStyle {
+    overflow-y: scroll,
+}
+
+.cardBody {
+    margin-top: 3.5rem;
+    padding-left: 0 !important;
+}
+
+.hideOverflow {
+    overflow-x: hidden;
+}

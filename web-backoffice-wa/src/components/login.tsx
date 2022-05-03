@@ -1,22 +1,12 @@
-import { Component } from 'react'
+import React, { Component } from 'react'
+import { Spinner, Card, CardBody, Input, CardTitle, Button } from 'reactstrap'
+
+// DB
 import { Config } from '../model/requestModel'
 
-import {Spinner, Card, CardBody, Input, CardTitle, Button, Navbar, NavbarBrand, NavbarToggler} from 'reactstrap'
-
-import '../css/login.css';
+// CSS
+import '../css/components/login.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-// data structure
-const loginStructure = {
-  loginData: {
-    email: "",
-    password: ""
-  },
-  loginResponse: {
-    status: false,
-    msg: "",
-  }
-}
 
 // component interface
 interface LoginProps {
@@ -26,9 +16,11 @@ interface LoginProps {
 interface LoginState {
   emailValid: boolean,
   loading: boolean,
+  passwordDirty: boolean,
   loginData: {
     email: string,
     password: string,
+    
   }
   loginResponse: {
     status: boolean,
@@ -36,35 +28,48 @@ interface LoginState {
   }
 }
 
+// data structure
+const loginStructure = {
+  loginData: {
+    email: "",
+    password: "",
+  },
+  loginResponse: {
+    status: false,
+    msg: "",
+  }
+}
+
 class LoginComponent extends Component<LoginProps, LoginState> {
-  constructor(props: any) {
-    super(props)
-    this.state = {
-      emailValid: true,
-      loading: false,
-      loginData: {
-        ...loginStructure.loginData
-      },
-      loginResponse: {
-        ...loginStructure.loginResponse
-      }
+  public state = {
+    emailValid: true,
+    loading: false,
+    passwordDirty: false,
+    loginData: {
+      ...loginStructure.loginData
+    },
+    loginResponse: {
+      ...loginStructure.loginResponse
     }
   }
 
-  shouldComponentUpdate(nextProps: any, nextStates: any) {
-    if(
+  public shouldComponentUpdate(nextProps: any, nextStates: any) {
+    if (
       this.state.emailValid !== nextStates.emailValid ||
       this.state.loading !== nextStates.loading ||
-      this.state.loginResponse !== nextStates.loginResponse) {
-        return true
-      }
-      return false
+      this.state.passwordDirty !== nextStates.passwordDirty ||
+      {...this.state.loginResponse} !== {...nextStates.loginResponse} ||
+      {...this.state.loginData} !== {...nextStates.loginData}
+    ) {
+      return true
+    }
+    return false
   }
 
-  async login() {
-    const regexp : RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+  private async login() {
+    const regexp: RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
     const url = "http://localhost:8080/loginAdmin"
-    if(regexp.test(this.state.loginData.email)) {
+    if (regexp.test(this.state.loginData.email) && this.state.loginData.password.length > 0) {
       this.setState({
         loading: true,
         emailValid: true,
@@ -74,13 +79,14 @@ class LoginComponent extends Component<LoginProps, LoginState> {
         .then(data => {
           this.setState({
             loading: false,
-            loginResponse:  {
+            loginResponse: {
               status: data["status"],
               msg: data["msg"]
             }
           })
           this.props.handleLogin(data["status"])
         })
+      localStorage.setItem("email", JSON.stringify({ email: this.state.loginData.email }))
     } else {
       this.setState({
         emailValid: false,
@@ -88,73 +94,82 @@ class LoginComponent extends Component<LoginProps, LoginState> {
     }
   }
 
-  handleChange(e: React.FormEvent<HTMLInputElement>, type: string) {
+  private handleChange(e: React.FormEvent<HTMLInputElement>, type: string) {
+    console.log("tes")
     e.preventDefault()
-    var value = e.currentTarget.value;
-    this.setState({loginData: {
-      ...this.state.loginData,
-      [type]: value
-    }});
+    let value = e.currentTarget.value;
+    if(type === "email") {
+      value = value.toLowerCase()
+    } else {
+      this.setState({
+        passwordDirty: true
+      })
+    }
+    this.setState({
+      emailValid: true,
+      loginData: {
+        ...this.state.loginData,
+        [type]: value
+      }
+    });
   }
 
-  render() {
-    // spinner
+  private enterPressed(e: React.KeyboardEvent<HTMLInputElement>) {
+    if(e.key === "Enter") {
+      this.login()
+    }
+  }
+
+  public render() {
+    const passwordCheck = this.state.loginData.password.length === 0 && this.state.passwordDirty
     let spinner = <></>
-    if(this.state.loading) {
+    if (this.state.loading) {
       spinner = (
         <Spinner color="primary" className="spinner">
           Loading...
         </Spinner>
       )
     }
-    if(!this.state.loading && this.state.loginResponse.msg.length > 0) {
+    if (!this.state.loading && this.state.loginResponse.msg.length > 0) {
       const loginValid: boolean = this.state.loginResponse.status
       spinner = (
-        <CardTitle tag="h6" style={{"color": loginValid ? "black" : "red"}}>
+        <CardTitle tag="h6" style={{ "color": loginValid ? "black" : "red" }}>
           <b>
-            {this.state.loginResponse.msg} 
+            {this.state.loginResponse.msg}
           </b>
         </CardTitle>
       )
     }
 
     return (
-    <div className='text-center'>
-        <Navbar
-          color="primary"
-          dark
-          expand
-        >
-            <NavbarBrand href="/">
-            Whatsapp Web Backoffice
-            </NavbarBrand>
-            <NavbarToggler />
-        </Navbar>
-        <div>
-            <Card body outline className='loginForm'>
-                <CardBody>
-                <CardTitle tag="h5">Admin login backoffice</CardTitle>
-                <Input
-                    bsSize="sm"
-                    placeholder="enter email"
-                    invalid={!this.state.emailValid}
-                    onChange={(e) => this.handleChange(e, "email")}
-                />
-                <Input
-                    type="password"
-                    bsSize="sm"
-                    placeholder="enter password"
-                    onChange={(e) => this.handleChange(e, "password")}
-                />
-                <br />
-                <Button className='loginButton' onClick={() => this.login()}>
-                    Login
-                </Button>
-                </CardBody>
-                {spinner}
-            </Card>
-        </div>
-    </div>
+      <div className='text-center'>
+        <Card body outline className='loginForm'>
+          <CardBody>
+            <CardTitle tag="h5">Admin login backoffice</CardTitle>
+            <Input
+              bsSize="sm"
+              placeholder="enter email"
+              invalid={!this.state.emailValid}
+              onChange={(e) => this.handleChange(e, "email")}
+              onKeyDown={(e) => this.enterPressed(e)}
+              style={{textTransform: "lowercase"}}
+            />
+            <Input
+              type="password"
+              bsSize="sm"
+              placeholder="enter password"
+              invalid={passwordCheck}
+              onChange={(e) => this.handleChange(e, "password")}
+              onKeyDown={(e) => this.enterPressed(e)}
+            />
+            <br />
+            <Button className='loginButton' onClick={() => this.login()}>
+              Login
+            </Button>
+          </CardBody>
+          {spinner}
+        </Card>
+      </div>
     );
   }
 }
