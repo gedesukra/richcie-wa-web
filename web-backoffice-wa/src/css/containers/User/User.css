@@ -1,0 +1,29 @@
+/* userlist css */
+#spinner {
+    margin-top: 3rem;
+    margin-left: 50%;
+    color: blueviolet;
+}
+
+#successMessage {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+.userListTable {
+    margin-top: 2rem;
+}
+
+.userListTableData td {
+    text-align: center;
+}
+
+/* addUser css */
+.inputDiv {
+    margin-top: 1rem;
+}
+
+.userAddButton {
+    margin-top: 3rem;
+    width: 100%;
+}

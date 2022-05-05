@@ -1,5 +1,5 @@
 import { Component, Fragment, ReactNode } from 'react'
-import { Row, Col, Card, CardTitle, CardText, Spinner } from 'reactstrap'
+import { Row, Col, Card, CardTitle, Spinner } from 'reactstrap'
 
 import { ListUser, DeleteUser, EditUser, AddUser } from '../container/User/User'
 import { ListUserAdmin, AddUserAdmin, EditUserAdmin, DeleteUserAdmin } from '../container/UserAdmin/UserAdmin'
@@ -76,6 +76,9 @@ interface BackOfficeStates {
         displayChild: string,
         displayParent: string,
     },
+    data: {
+        userList: Array<string>
+    }
     loading: boolean,
     displayUsername: string,
 }
@@ -98,6 +101,9 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             displayChild: "",
             displayParent: "",
         },
+        data: {
+            userList: []
+        },
         loading: false,
         displayUsername: "",
     }
@@ -105,15 +111,28 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
     public async componentDidMount() {
         const email = localStorage.getItem("email")
         const url = "http://localhost:8080/getUsername"
+        const getUserUrl = "http://localhost:8080/getUserList"
         this.setState({
             loading: true
         })
         if(email !== null) {
-            const getUser = await fetch(url, Config("POST", {email: JSON.parse(email).email}))
+            // get whatsapp user list
+            const userListData = await fetch(getUserUrl, Config("POST", JSON.parse(email)))
+                .then(res => res.json())
+                .then(data => data)
+            this.setState({
+                data: {
+                    ...this.state.data,
+                    userList: userListData
+                }
+            })
+
+            // get username
+            const getUsernameAdmin = await fetch(url, Config("POST", {email: JSON.parse(email).email}))
                 .then(res => res.json())
             this.setState({
                 loading: false,
-                displayUsername: getUser,
+                displayUsername: getUsernameAdmin,
             })
         }
     }
@@ -157,7 +176,14 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             [this.state.selected.displayParent as keyof BackOfficeStates["functionalPage"]]
             [this.state.selected.displayChild as keyof (userList | userAdminList | dashboardList)]
         }
-       
+        
+        // send data to user list if selected child is "ListUser"
+        if(this.state.selected.displayChild === "ListUser" && this.state.data.userList.length > 0) {
+            localStorage.setItem("listUser", JSON.stringify(this.state.data.userList))
+        } else {
+            localStorage.removeItem("listUser")
+        }
+
         return (
             <div className='hideOverflow'>
                 <Row>
@@ -182,13 +208,13 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                                         : this.state.selected.displayTitle
                                 }
                             </CardTitle>
-                            <CardText>
+                            <div>
                                 {
                                     selectedBool
                                         ? "As admin, you allowed to manage user admin, whatsapp user and view online users" 
                                         : selectedElement()
                                 }
-                            </CardText>
+                            </div>
                         </Card>
                     </Col>
                 </Row>
