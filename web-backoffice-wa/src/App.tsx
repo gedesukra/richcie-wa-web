@@ -8,8 +8,8 @@ import {
 import { Navbar, NavbarBrand } from 'reactstrap'
 
 // Class Component
-import { Login } from './components/login'
-import { Dashboard } from './components/backoffice'
+import { Login } from './components/Login'
+import { Dashboard } from './components/Backoffice'
 
 // CSS
 import './App.css'

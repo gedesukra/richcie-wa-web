@@ -1,13 +1,16 @@
 /* userlist css */
-#spinner {
+.spinner {
     margin-top: 3rem;
     margin-left: 50%;
     color: blueviolet;
 }
 
-#successMessage {
+.successMessage {
     margin-top: 3rem;
     text-align: center;
+    text-transform: uppercase;
+    font-weight: bolder;
+    font-size: 2vw;
 }
 
 .userListTable {
