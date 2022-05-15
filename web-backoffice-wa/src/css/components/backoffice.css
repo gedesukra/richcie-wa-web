@@ -10,3 +10,11 @@
 .hideOverflow {
     overflow-x: hidden;
 }
+
+.deleteMessage {
+    text-align: center;
+    display: block;
+    margin-top: 2rem;
+    font-size: 2vw;
+    text-transform: uppercase;
+}

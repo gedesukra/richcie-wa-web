@@ -95,7 +95,6 @@ class LoginComponent extends Component<LoginProps, LoginState> {
   }
 
   private handleChange(e: React.FormEvent<HTMLInputElement>, type: string) {
-    console.log("tes")
     e.preventDefault()
     let value = e.currentTarget.value;
     if(type === "email") {

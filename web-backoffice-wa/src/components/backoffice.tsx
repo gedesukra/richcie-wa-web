@@ -1,7 +1,7 @@
 import { Component, Fragment, ReactNode } from 'react'
 import { Row, Col, Card, CardTitle, Spinner } from 'reactstrap'
 
-import Pagination from '../container/Backoffice_table/pagination'
+import Pagination from '../container/Backoffice_table_pagination/pagination'
 
 import { ListUser, DeleteUser, EditUser, AddUser } from '../container/User/user'
 import { ListUserAdmin, AddUserAdmin, EditUserAdmin, DeleteUserAdmin } from '../container/UserAdmin/userAdmin'
@@ -16,13 +16,21 @@ import '../css/components/backoffice.css'
 
 const email = localStorage.getItem("email")
 const url = "http://localhost:8080/getUsername"
-const getUserUrlScope = "http://localhost:8080/getUserListWithScope"
+const getUserListWithScope = "http://localhost:8080/getUserListWithScope"
+const getAdminListWithScope = "http://localhost:8080/getAdminListWithScope"
 const getUserListLength = "http://localhost:8080/getUserListLength"
+const getAdminListLength = "http://localhost:8080/getAdminListLength"
 const initialInput = {
     email: ["", false],
     password: ["", false],
     username: ["", false],
     gender: ["Male", true],
+}
+
+interface deleteStructure {
+    uid: string,
+    username: string,
+    role: string,
 }
 
 interface buttonList {
@@ -68,23 +76,26 @@ interface BackOfficeStates {
         displayTitle: string,
         displayChild: string,
         displayParent: string,
+        role: string,
     },
     data: {
         userList: Array<string>,
         loading: boolean,
+        msg: string,
     },
     pagination: {
         currentPagination: number,
         paginationLength: number,
         paginationScope: number[],
     },
-    addUniversal: {
+    universalInputData: {
         input: {
             email: any[],
             password: any[],
             username: any[],
             gender: any[],
         },
+        selectedIndex: number,
         loading: boolean,
         msg: string,
     },
@@ -110,74 +121,95 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             displayTitle: "",
             displayChild: "",
             displayParent: "",
+            role: "",
         },
         data: {
             userList: [],
-            loading: false,
+            loading: true,
+            msg: "",
         },
         pagination: {
             currentPagination: 0,
             paginationLength: 0,
             paginationScope: [1, 5],
         },
-        addUniversal: {
+        universalInputData: {
             input: {
                 email: ["", false],
                 password: ["", false],
                 username: ["", false],
                 gender: ["Male", true],
             },
+            selectedIndex: -1,
             loading: false,
             msg: "",
         },
-        loading: false,
+        loading: true,
         displayUsername: "",
         editMode: false,
     }
 
-    private sendData = {
-        "email": this.state.addUniversal.input.email[0],
-        "password": this.state.addUniversal.input.password[0],
-        "username": this.state.addUniversal.input.username[0],
-        "gender": this.state.addUniversal.input.gender[0],
+    private urlList = () => this.state.selected.role === "admin"
+        ? getAdminListWithScope
+        : getUserListWithScope
+
+    private urlListLength = () => this.state.selected.role === "admin"
+        ? getAdminListLength
+        : getUserListLength
+
+    private sendData = () => {
+        if (this.state.universalInputData.selectedIndex < 0) {
+            return ({
+                "email": this.state.universalInputData.input.email[0],
+                "password": this.state.universalInputData.input.password[0],
+                "username": this.state.universalInputData.input.username[0],
+                "gender": this.state.universalInputData.input.gender[0],
+            })
+        }
+        return ({
+            "uid": JSON.parse(this.state.data.userList[this.state.universalInputData.selectedIndex]).id,
+            "email": this.state.universalInputData.input.email[0],
+            "password": this.state.universalInputData.input.password[0],
+            "username": this.state.universalInputData.input.username[0],
+            "gender": this.state.universalInputData.input.gender[0],
+        })
+    }
+
+    private async assignPagination() {
+        if (email !== null) {
+            // get whatsapp user list
+            const universalListData = await fetch(this.urlList(), Config("POST", { email: JSON.parse(email).email, pagScope: this.state.pagination.paginationScope }))
+                .then(res => res.json())
+                .then(data => data)
+            console.log(JSON.parse(universalListData[0]))
+
+            const universalPaginationLength = await fetch(this.urlListLength(), Config("POST", { email: JSON.parse(email).email }))
+                .then(data => data.json())
+                .then(res => res)
+            
+            const finalPagination = {
+                result: 0
+            }
+
+            finalPagination.result += Math.floor(universalPaginationLength.paginationLength / 5)
+            if (universalPaginationLength.paginationLength % 5 !== 0) {
+                finalPagination.result += 1
+            }
+            if (universalListData.length > 0) {
+                this.setState({
+                    pagination: {
+                        ...this.state.pagination,
+                        paginationLength: finalPagination.result,
+                    },
+                })
+            }
+        }
     }
 
     public async componentDidMount() {
-        this.setState({
-            data: {
-                ...this.state.data,
-                loading: true,
-            },
-            loading: true
-        })
-        if(email !== null) {
-            // get whatsapp user list
-            const userListData = await fetch(getUserUrlScope, Config("POST", {email: JSON.parse(email).email, pagScope: this.state.pagination.paginationScope}))
-                .then(res => res.json())
-                .then(data => data)
-            const paginationItemLength = await fetch(getUserListLength, Config("POST", {email: JSON.parse(email).email}))
-                .then(data => data.json())
-                .then(res => res)
-            paginationItemLength.paginationLength = Math.floor(paginationItemLength.paginationLength / 5)
-            if(paginationItemLength.paginationLength % 5 !== 0) {
-                paginationItemLength.paginationLength += 1
-            }
-            if(userListData.length >= 0) {
-                this.setState({
-                    data: {
-                        ...this.state.data,
-                        userList: userListData,
-                        loading: false,
-                    },
-                    pagination: {
-                        ...this.state.pagination,
-                        paginationLength: paginationItemLength.paginationLength,
-                    }
-                })
-            }
-
+        if (email !== null) {
             // get username
-            const getUsernameAdmin = await fetch(url, Config("POST", {email: JSON.parse(email).email}))
+            const getUsernameAdmin = await fetch(url, Config("POST", { email: JSON.parse(email).email }))
                 .then(res => res.json())
             this.setState({
                 loading: false,
@@ -201,51 +233,73 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
     private changePagination = async (argChange: number) => {
         const data = await this.updateUserData(this.state.pagination.paginationScope)
-        this.setState({
-            data: {
-                ...this.state.data,
-                userList: data,
-                loading: false,
-            },
-            pagination: {
-                ...this.state.pagination,
-                currentPagination: argChange
-            }
-        })
+        if (data.length > 0) {
+            this.setState({
+                data: {
+                    ...this.state.data,
+                    userList: data,
+                    loading: false,
+                },
+                pagination: {
+                    ...this.state.pagination,
+                    currentPagination: argChange,
+                }
+            })
+        }
     }
 
     private ChildButton = (parentName: string, args: string) => {
         this.setState({
-            addUniversal: {
-                ...this.state.addUniversal,
-                input: initialInput
-            }
+            ...this.state,
+            data: {
+                ...this.state.data,
+                msg: "",
+            },
+            universalInputData: {
+                ...this.state.universalInputData,
+                input: initialInput,
+                msg: "",
+            },
+            editMode: false,
         })
         let selectDisplay = ""
         args.split(" ").forEach((s) => selectDisplay += s.charAt(0).toUpperCase() + s.slice(1))
         const matchIndex = /[^A-Za-z]/.exec(selectDisplay)
         const paginationCalculate = [1, 5]
-        if(matchIndex !== null) {
+        const assignRole = selectDisplay.toLowerCase().includes("admin")
+            ? "admin"
+            : "user"
+        if (matchIndex !== null) {
             selectDisplay = selectDisplay.slice(0, matchIndex.index)
         }
-        
+
         this.setState({
             selected: {
                 displayTitle: args,
                 displayChild: selectDisplay,
                 displayParent: parentName,
+                role: assignRole,
             },
             pagination: {
                 ...this.state.pagination,
                 currentPagination: 0,
                 paginationScope: paginationCalculate,
             }
-        }, () => this.changePagination(0))
+        }, () => {
+            this.setState({
+                data: {
+                    ...this.state.data,
+                    loading: true,
+                },
+            })
+            this.assignPagination()
+            this.changePagination(0)
+        })
     }
 
     private async updateUserData(scope: number[]): Promise<Array<string>> {
-        if(email !== null) {
-            const updateData: any = fetch(getUserUrlScope, Config("POST", {email: JSON.parse(email).email, pagScope: scope}))
+        if (email !== null) {
+            const updateData: any = fetch(this.urlList(), Config("POST", { email: JSON.parse(email).email, pagScope: scope }))
                 .then(res => res.json())
                 .then(data => data)
             return updateData
@@ -255,15 +309,15 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
     private async paginationControl(method: string, index: number, disabled: boolean) {
         const scopeIncrementDecrement: [number, number] = [5, 5]
-        if(!disabled && this.state.pagination.currentPagination !== index) {
+        if (!disabled && this.state.pagination.currentPagination !== index) {
             this.setState({
                 data: {
                     ...this.state.data,
                     loading: true,
+                    msg: "",
                 }
             })
-
-            if(method === "set" && index >= 0) {
+            if (method === "set" && index >= 0) {
                 const initialScope: [number, number] = [1, 5]
                 const paginationCalculate = [initialScope[0] + (scopeIncrementDecrement[0] * index), initialScope[1] + (scopeIncrementDecrement[1] * index)]
                 this.setState({
@@ -274,8 +328,8 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 }, () => this.changePagination(index))
             }
 
-            if(method === "next") {
-                const paginationCalculate = [this.state.pagination.paginationScope[0] + scopeIncrementDecrement[0] , this.state.pagination.paginationScope[1] + scopeIncrementDecrement[1]]
+            if (method === "next") {
+                const paginationCalculate = [this.state.pagination.paginationScope[0] + scopeIncrementDecrement[0], this.state.pagination.paginationScope[1] + scopeIncrementDecrement[1]]
                 this.setState({
                     pagination: {
                         ...this.state.pagination,
@@ -284,8 +338,8 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 }, () => this.changePagination(this.state.pagination.currentPagination + 1))
             }
 
-            if(method === "back") {
-                const paginationCalculate = [this.state.pagination.paginationScope[0] - scopeIncrementDecrement[0] , this.state.pagination.paginationScope[1] - scopeIncrementDecrement[1]]
+            if (method === "back") {
+                const paginationCalculate = [this.state.pagination.paginationScope[0] - scopeIncrementDecrement[0], this.state.pagination.paginationScope[1] - scopeIncrementDecrement[1]]
                 this.setState({
                     pagination: {
                         ...this.state.pagination,
@@ -294,7 +348,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 }, () => this.changePagination(this.state.pagination.currentPagination - 1))
             }
 
-            if(method === "first") {
+            if (method === "first") {
                 const paginationCalculate = [1, 5]
                 this.setState({
                     pagination: {
@@ -304,7 +358,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 }, () => this.changePagination(0))
             }
 
-            if(method === "last") {
+            if (method === "last") {
                 const initialScope: [number, number] = [1, 5]
                 const finalIndex = this.state.pagination.paginationLength - 1
                 const paginationCalculate = [initialScope[0] + (scopeIncrementDecrement[0] * finalIndex), initialScope[1] + (scopeIncrementDecrement[1] * finalIndex)]
@@ -319,31 +373,31 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
     }
 
     private async changeAddInput(e: React.FormEvent<HTMLInputElement>, key: string) {
-        if(e !== null && key !== null) {
+        if (e !== null && key !== null) {
             e?.preventDefault()
             this.setState({
-                addUniversal: {
-                    ...this.state.addUniversal,
+                universalInputData: {
+                    ...this.state.universalInputData,
                     input: {
-                        ...this.state.addUniversal.input,
+                        ...this.state.universalInputData.input,
                         [key]: [e?.currentTarget.value.trim(), false]
                     }
                 }
             }, () => {
                 let checkBoolean: boolean
-                if(key === "email" && key !== null) {
+                if (key === "email" && key !== null) {
                     const emailRegexp: RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-                    checkBoolean = emailRegexp.test(this.state.addUniversal.input.email[0] as string)
+                    checkBoolean = emailRegexp.test(this.state.universalInputData.input.email[0] as string)
                 } else {
-                    const inputValid = this.state.addUniversal.input[key as keyof BackOfficeStates["addUniversal"]["input"]][0] as string
+                    const inputValid = this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0] as string
                     checkBoolean = inputValid.length > 0
                 }
                 this.setState({
-                    addUniversal: {
-                        ...this.state.addUniversal,
+                    universalInputData: {
+                        ...this.state.universalInputData,
                         input: {
-                            ...this.state.addUniversal.input,
-                            [key]: [this.state.addUniversal.input[key as keyof BackOfficeStates["addUniversal"]["input"]][0], checkBoolean]
+                            ...this.state.universalInputData.input,
+                            [key]: [this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0], checkBoolean]
                         }
                     }
                 })
@@ -351,50 +405,129 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         }
     }
 
-    private async universalButton(role: string, method: string) {
-        if(email !== null) {
+    private async universalButton(method: string) {
+        if (email !== null) {
             const listBool: boolean[] = []
-            Object.keys(this.state.addUniversal.input).forEach(
-                k => listBool.push(this.state.addUniversal.input[k as keyof BackOfficeStates["addUniversal"]["input"]][1] as any as boolean)
+            Object.keys(this.state.universalInputData.input).forEach(
+                k => listBool.push(this.state.universalInputData.input[k as keyof BackOfficeStates["universalInputData"]["input"]][1] as any as boolean)
             )
-            if(listBool.every((el: any) => el === true)) {
-                const addUserUrl = (role == "user" && method == "Add") ? "http://localhost:8080/addUser" : "";
+            if (listBool.every((el: any) => el === true)) {
+                const addEditUrl = (this.state.selected.role === "user" && method === "Add")
+                    ? "http://localhost:8080/addUser"
+                    : (this.state.selected.role === "user" && method === "Edit")
+                        ? "http://localhost:8080/editUser"
+                        : (this.state.selected.role === "admin" && method === "Add")
+                            ? "http://localhost:8080/addAdmin"
+                            : (this.state.selected.role === "admin" && method === "Edit")
+                                ? "http://localhost:8080/editAdmin"
+                                : "";
                 this.setState({
-                    addUniversal: {
-                        ...this.state.addUniversal,
+                    universalInputData: {
+                        ...this.state.universalInputData,
                         loading: true
                     }
                 })
-                const addUserResponse: any = await fetch(addUserUrl, Config("POST", {adminEmail: JSON.parse(email).email, addData: {...this.sendData}}))
+                const addEditResponse: any = await fetch(addEditUrl, Config("POST", { adminEmail: JSON.parse(email).email, addEditData: { ...this.sendData() } }))
                     .then(res => res.json())
                     .then(data => data)
-                if(addUserResponse !== null) {
+                if (addEditResponse !== null) {
+                    this.assignPagination()
                     this.setState({
-                        addUniversal: {
-                            ...this.state.addUniversal,
+                        universalInputData: {
+                            ...this.state.universalInputData,
                             loading: false,
-                            msg: addUserResponse.msg
+                            msg: addEditResponse.msg
                         }
+                    }, () => {
+                        this.assignPagination()
+                        this.changePagination(this.state.pagination.currentPagination)
                     })
                 }
             }
         }
     }
 
-    private universalTableAction(action: string) {
-        if(action === "edit") {
+    private async universalTableAction(action: string, uid: string, paramData: deleteStructure) {
+        this.setState({
+            universalInputData: {
+                ...this.state.universalInputData,
+                msg: "",
+            }
+        })
+        if (action === "edit") {
+            if (!this.state.editMode && uid !== "") {
+                const nameColumn = this.state.selected.role === "user"
+                    ? "username"
+                    : "adminname"
+                const selectedDataIndex: number = this.state.data.userList.map(obj => JSON.parse(obj).id).indexOf(uid)
+                const inputData = {
+                    email: JSON.parse(this.state.data.userList[selectedDataIndex]).email,
+                    password: "",
+                    username: JSON.parse(this.state.data.userList[selectedDataIndex])[nameColumn],
+                    gender: JSON.parse(this.state.data.userList[selectedDataIndex]).gender,
+                }
+                inputData.gender = inputData.gender === "m"
+                    ? "Male"
+                    : "Female"
+                this.setState({
+                    universalInputData: {
+                        ...this.state.universalInputData,
+                        input: {
+                            ...this.state.universalInputData.input,
+                            email: [inputData.email, true],
+                            password: [inputData.password, false],
+                            username: [inputData.username, true],
+                            gender: [inputData.gender, true],
+                        },
+                        selectedIndex: selectedDataIndex,
+                    }
+                })
+            }
             this.setState({
                 editMode: !this.state.editMode
             })
+        }
+
+        if (action === "delete" && paramData !== null) {
+            this.setState({
+                data: {
+                    ...this.state.data,
+                    loading: true,
+                }
+            })
+            if (email !== null) {
+                const deleteUrl = paramData.role === "user"
+                    ? "http://localhost:8080/deleteUser"
+                    : "http://localhost:8080/deleteAdmin"
+                const deleteRes = await fetch(deleteUrl, Config("POST", { adminEmail: JSON.parse(email).email, deleteData: { ...paramData } }))
+                    .then(res => res.json())
+                    .then(data => data)
+                if(deleteRes !== null) {
+                    this.setState({
+                        data: {
+                            ...this.state.data,
+                            loading: false,
+                            msg: deleteRes.msg
+                        },
+                        pagination: {
+                            ...this.state.pagination,
+                            paginationScope: [1, 5]
+                        }
+                    }, () => {
+                        this.changePagination(0)
+                        this.assignPagination()
+                    })
+                }
+            }
         }
     }
 
     public render(): ReactNode {
         interface passedParameter {
             paramFor: string,
-            dataState: BackOfficeStates["addUniversal"],
+            dataState: BackOfficeStates["universalInputData"],
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
-            universalEditSendButton: (role: string, methodParam: string) => void
+            universalEditSendButton: (methodParam: string) => void
         }
 
         const buttonList = Object.keys(this.state.buttonBackOfficeList)
@@ -402,17 +535,17 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         const childAddDisplay = this.state.selected.displayChild.toLowerCase().includes("useradmin") ? "admin" : "user"
         const inputParameter: passedParameter = {
             paramFor: childAddDisplay,
-            dataState: this.state.addUniversal,
+            dataState: this.state.universalInputData,
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => this.changeAddInput(e, key),
-            universalEditSendButton: (role: string, methodParam: string) => this.universalButton(role, methodParam)
+            universalEditSendButton: (methodParam: string) => this.universalButton(methodParam)
         }
 
         let selectedElement: any = <Fragment />
-        if(!selectedBool) {
-            selectedElement = 
-            this.state.functionalPage
-            [this.state.selected.displayParent as keyof BackOfficeStates["functionalPage"]]
-            [this.state.selected.displayChild as keyof (typeof userFunc | typeof userAdminFunc | typeof dashboardFunc)]
+        if (!selectedBool) {
+            selectedElement =
+                this.state.functionalPage
+                [this.state.selected.displayParent as keyof BackOfficeStates["functionalPage"]]
+                [this.state.selected.displayChild as keyof (typeof userFunc | typeof userAdminFunc | typeof dashboardFunc)]
         }
 
         return (
@@ -442,38 +575,43 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                             <div>
                                 {
                                     selectedBool
-                                        ? "As admin, you allowed to manage user admin, whatsapp user and view online users" 
+                                        ? "As admin, you allowed to manage user admin, whatsapp user and view online users"
                                         : this.state.selected.displayChild === "AddUser" || this.state.selected.displayChild === "AddUserAdmin"
                                             ? selectedElement(
                                                 inputParameter,
                                             )
                                             : (
                                                 this.state.pagination.paginationLength >= 1 && !this.state.editMode
-                                                ? Pagination(
-                                                    selectedElement(
-                                                        this.state.data.userList, 
+                                                    ? Pagination(
+                                                        selectedElement(
+                                                            this.state.data.userList,
+                                                            this.state.data.loading,
+                                                            (arg: string, uid: string, deleteData: deleteStructure) => this.universalTableAction(arg, uid, deleteData),
+                                                            this.state.editMode,
+                                                            inputParameter,
+                                                        ),
+                                                        this.state.pagination.paginationLength,
+                                                        this.state.pagination.currentPagination,
                                                         this.state.data.loading,
-                                                        (arg: string) => this.universalTableAction(arg),
+                                                        (method, pagIndex, disabled) => this.paginationControl(
+                                                            method,
+                                                            pagIndex,
+                                                            disabled
+                                                        )
+                                                    )
+                                                    : selectedElement(
+                                                        this.state.data.userList,
+                                                        this.state.data.loading,
+                                                        (arg: string, uid: string, deleteData: deleteStructure) => this.universalTableAction(arg, uid, deleteData),
                                                         this.state.editMode,
                                                         inputParameter,
-
-                                                    ), 
-                                                    this.state.pagination.paginationLength, 
-                                                    this.state.pagination.currentPagination,
-                                                    (method, pagIndex, disabled) => this.paginationControl(
-                                                        method, 
-                                                        pagIndex, 
-                                                        disabled
                                                     )
-                                                )
-                                                : selectedElement(
-                                                    this.state.data.userList, 
-                                                    this.state.data.loading,
-                                                    (arg: string) => this.universalTableAction(arg),
-                                                    this.state.editMode,
-                                                    inputParameter,
-                                                )
                                             )
+                                }
+                                {
+                                    this.state.data.msg.length > 0
+                                        ? <CardTitle className='deleteMessage'>{this.state.data.msg}</CardTitle>
+                                        : <Fragment />
                                 }
                             </div>
                         </Card>

@@ -2,20 +2,20 @@ import { ReactNode, Fragment } from 'react'
 import { Button } from 'reactstrap'
 import { BsFillArrowLeftCircleFill } from 'react-icons/bs'
 
-import '../../css/containers/User/userEdit.css'
+import '../css/containers/universalButtonBackEdit.css'
 
-function userEdit(
+function universalBackButton(
     children: ReactNode, 
     inputComponent: ReactNode, 
     editMode: boolean,
     paramFor: string,
-    editBack: (argParam: string) => void,
+    editBack: (argParam: string, blank: string) => void,
 ) {
     return (
         editMode 
             ? (
                 <Fragment>
-                    <Button color='light' onClick={() => editBack("edit")}>
+                    <Button color='light' onClick={() => editBack("edit", "")}>
                         <BsFillArrowLeftCircleFill className='arrowIcon' /> Back to edit another {paramFor}
                     </Button>
                     {inputComponent}
@@ -26,4 +26,4 @@ function userEdit(
     )
 }
 
-export const UserEdit = userEdit
+export const UniversalBackButton = universalBackButton

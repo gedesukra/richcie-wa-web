@@ -1,12 +1,19 @@
 import { Fragment } from 'react'
 import { Spinner, Table, Button } from 'reactstrap'
-import '../../../css/containers/User/UserInnerContainer/innerUser.css'
+import '../css/containers/universalTable.css'
+
+interface deleteStructure {
+    uid: string,
+    username: string,
+    role: string,
+}
 
 function universalTable(
+    paramFor: string,
     action: string, 
     displayData: Array<string>, 
     loading: boolean,
-    tableActionButton: (methodParam: string) => void,
+    tableActionButton: (methodParam: string, uid: string, deleteData: deleteStructure) => void,
 ) {
     interface userDataStructure {
         id: string,
@@ -19,7 +26,7 @@ function universalTable(
 
     return (
         <Fragment>
-            {action} user that registered on whatsapp app
+            {action} {paramFor} that registered on whatsapp app
             <div className='userListTable'>
                 {
                     loading
@@ -42,11 +49,18 @@ function universalTable(
                                         displayObject.action = action
                                         return (
                                             <tr key={index} className='userListTableData'>
+                                                {
+                                                    paramFor === "user" 
+                                                        ? <></>
+                                                        : <td>
+                                                            {displayObject.id}
+                                                        </td>
+                                                }
                                                 <td>
-                                                    {displayObject.id}
+                                                    {paramFor === "user" ? displayObject.id : JSON.stringify(displayObject.authenticated)}
                                                 </td>
                                                 <td>
-                                                    {displayObject.username}
+                                                    {paramFor === "user" ? displayObject.username : displayObject.adminname}
                                                 </td>
                                                 <td>
                                                     {displayObject.email}
@@ -67,7 +81,11 @@ function universalTable(
                                                                 <Button 
                                                                     color={displayObject.action === "delete" ? "danger" : "info"}
                                                                     style={{color: "white", textTransform: "uppercase"}}
-                                                                    onClick={() => tableActionButton(displayObject.action)}
+                                                                    onClick={() => tableActionButton(displayObject.action, displayObject.id, {
+                                                                        uid: displayObject.id,
+                                                                        username: displayObject.username,
+                                                                        role: paramFor,
+                                                                    })}
                                                                 >
                                                                     {displayObject.action}
                                                                 </Button>
@@ -80,6 +98,7 @@ function universalTable(
                                     })}
                                 </tbody>
                             </Table>
+
                         )
                 }
             </div>

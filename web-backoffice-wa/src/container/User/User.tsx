@@ -1,8 +1,6 @@
-import { Spinner, Table, Button, Input, CardTitle } from 'reactstrap'
-
-import { UniversalInput } from './universalInput'
-import { UniversalTable } from './UniversalTable/universalTable'
-import { UserEdit } from './userEdit'
+import { UniversalInput } from '../universalInput'
+import { UniversalTable } from '../universalTable'
+import { UniversalBackButton } from '../universalButtonBackEdit'
 
 import '../../css/containers/User/user.css'
 
@@ -21,7 +19,12 @@ interface passedParameter {
     paramFor: string,
     dataState: AddUser,
     changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
-    universalEditSendButton: (role: string, methodParam: string) => void
+    universalEditSendButton: (methodParam: string) => void
+}
+
+interface deleteStructure {
+    uid: string,
+    username: string
 }
 
 export function addUser(
@@ -38,13 +41,14 @@ export const AddUser = addUser
 function deleteUser(
     data: Array<string>, 
     dataLoading: boolean, 
-    tableAction: (arg: string) => void
+    tableAction: (method: string, uid: string, deleteData: deleteStructure) => void
 ) {
     return UniversalTable(
+        "user",
         "delete", 
         data, 
         dataLoading,
-        (methodArg: string) => tableAction(methodArg)
+        (method, uid, deleteData) => tableAction(method, uid, deleteData)
     )
 }
 
@@ -53,17 +57,18 @@ export const DeleteUser = deleteUser
 function editUser(
     data: Array<string>, 
     dataLoading: boolean,
-    tableAction: (arg: string) => void,
+    tableAction: (method: string, uid: string) => void,
     editMode: boolean,
     parameterObject: passedParameter,
 ) {
     if(editMode) {
-        return UserEdit(
+        return UniversalBackButton(
             UniversalTable(
+                "user",
                 "edit", 
                 data, 
                 dataLoading,
-                (arg) => tableAction(arg),
+                (method, uid) => tableAction(method, uid),
             ),
             UniversalInput(
                 "Edit",
@@ -71,14 +76,15 @@ function editUser(
             ),
             editMode,
             parameterObject.paramFor,
-            (arg) => tableAction(arg)
+            (method, uid) => tableAction(method, uid)
         )
     }
     return UniversalTable(
+        "user",
         "edit", 
         data, 
         dataLoading,
-        (arg) => tableAction(arg),
+        (method, uid) => tableAction(method, uid),
     )
 }
 
@@ -91,10 +97,11 @@ function listUser(
     tableAction: (arg: string) => void,
 ) {
     return UniversalTable(
+        "user",
         "list", 
         data, 
         dataLoading,
-        (arg) => tableAction(arg),
+        (method) => tableAction(method),
     )
 }
 

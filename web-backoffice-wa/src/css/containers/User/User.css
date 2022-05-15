@@ -1,8 +1,9 @@
 /* userlist css */
 .spinner {
-    margin-top: 3rem;
-    margin-left: 50%;
+    display: block;
+    margin: auto;
     color: blueviolet;
+    margin-bottom: 2rem;
 }
 
 .successMessage {

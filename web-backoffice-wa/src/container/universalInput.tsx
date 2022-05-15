@@ -16,7 +16,7 @@ interface passedParameter {
     paramFor: string,
     dataState: AddUser,
     changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
-    universalEditSendButton: (role: string, methodParam: string) => void
+    universalEditSendButton: (methodParam: string) => void
 }
 
 function universalInput(
@@ -70,7 +70,12 @@ function universalInput(
                         )
                 }
                 {parameterObject.dataState.msg.length > 0 ? <CardTitle className='successMessage'>{parameterObject.dataState.msg}</CardTitle> : <></>}
-                <Button color='primary' className='userAddButton' onClick={() => parameterObject.universalEditSendButton(parameterObject.paramFor, methodArgs)} disabled={parameterObject.dataState.loading}>
+                <Button 
+                    color='primary' 
+                    className='userAddButton' 
+                    onClick={() => parameterObject.universalEditSendButton(methodArgs)} 
+                    disabled={parameterObject.dataState.loading}
+                >
                     {methodArgs} {parameterObject.paramFor}
                 </Button>
     </Fragment>
