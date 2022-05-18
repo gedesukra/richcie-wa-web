@@ -1,10 +1,11 @@
-import { Component, Fragment, ReactNode } from 'react'
-import { Row, Col, Card, CardTitle, Spinner } from 'reactstrap'
+import React, { Component, Fragment, ReactNode } from 'react'
+import { Row, Col, Card, CardTitle, Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'
+import { ToastContainer, toast } from 'react-toastify';
 
 import Pagination from '../container/Backoffice_table_pagination/pagination'
 
-import { ListUser, DeleteUser, EditUser, AddUser } from '../container/User/user'
-import { ListUserAdmin, AddUserAdmin, EditUserAdmin, DeleteUserAdmin } from '../container/UserAdmin/userAdmin'
+import { ListUser, AddUser } from '../container/User/user'
+import { ListUserAdmin, AddUserAdmin } from '../container/UserAdmin/userAdmin'
 import { ShowOnlineUser, RemoveOnlineUser } from '../container/Dashboard/dashboard'
 
 import Drawer from '../container/backoffice-drawer'
@@ -13,6 +14,7 @@ import { Config } from '../model/requestModel'
 
 import '../css/containers/backoffice-drawer.css'
 import '../css/components/backoffice.css'
+import 'react-toastify/dist/ReactToastify.css';
 
 const email = localStorage.getItem("email")
 const url = "http://localhost:8080/getUsername"
@@ -31,6 +33,7 @@ interface deleteStructure {
     uid: string,
     username: string,
     role: string,
+    email: string,
 }
 
 interface buttonList {
@@ -43,16 +46,12 @@ interface buttonList {
 // object init
 const userFunc: any = {
     ListUser: ListUser,
-    DeleteUser: DeleteUser,
-    EditUser: EditUser,
     AddUser: AddUser,
 }
 
 const userAdminFunc: any = {
     ListUserAdmin: ListUserAdmin,
-    DeleteUserAdmin: DeleteUserAdmin,
     AddUserAdmin: AddUserAdmin,
-    EditUserAdmin: EditUserAdmin,
 }
 
 const dashboardFunc: any = {
@@ -89,16 +88,17 @@ interface BackOfficeStates {
         paginationScope: number[],
     },
     universalInputData: {
-        input: {
-            email: any[],
-            password: any[],
-            username: any[],
-            gender: any[],
-        },
+        input: typeof initialInput,
         selectedIndex: number,
         loading: boolean,
         msg: string,
+        editPassword: boolean,
     },
+    delete: {
+        mode: boolean,
+        email: string,
+        data: deleteStructure,
+    }
     loading: boolean,
     displayUsername: string,
     editMode: boolean,
@@ -135,18 +135,27 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         },
         universalInputData: {
             input: {
-                email: ["", false],
-                password: ["", false],
-                username: ["", false],
-                gender: ["Male", true],
+                ...initialInput,
             },
             selectedIndex: -1,
             loading: false,
             msg: "",
+            editPassword: false,
+        },
+        delete: {
+            mode: false,
+            email: "",
+            data: {
+                uid: "",
+                username: "",
+                role: "",
+                email: "",
+            },
         },
         loading: true,
         displayUsername: "",
         editMode: false,
+
     }
 
     private urlList = () => this.state.selected.role === "admin"
@@ -181,12 +190,11 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             const universalListData = await fetch(this.urlList(), Config("POST", { email: JSON.parse(email).email, pagScope: this.state.pagination.paginationScope }))
                 .then(res => res.json())
                 .then(data => data)
-            console.log(JSON.parse(universalListData[0]))
 
             const universalPaginationLength = await fetch(this.urlListLength(), Config("POST", { email: JSON.parse(email).email }))
                 .then(data => data.json())
                 .then(res => res)
-            
+
             const finalPagination = {
                 result: 0
             }
@@ -207,14 +215,19 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
     }
 
     public async componentDidMount() {
+        this.setUsernameAdmin()
+    }
+
+    private async setUsernameAdmin() {
         if (email !== null) {
-            // get username
             const getUsernameAdmin = await fetch(url, Config("POST", { email: JSON.parse(email).email }))
                 .then(res => res.json())
-            this.setState({
-                loading: false,
-                displayUsername: getUsernameAdmin,
-            })
+            if (getUsernameAdmin !== null) {
+                this.setState({
+                    loading: false,
+                    displayUsername: getUsernameAdmin,
+                })
+            }
         }
     }
 
@@ -248,7 +261,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         }
     }
 
-    private ChildButton = (parentName: string, args: string) => {
+    private resetAllState = () => {
         this.setState({
             ...this.state,
             data: {
@@ -261,7 +274,16 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 msg: "",
             },
             editMode: false,
+            delete: {
+                ...this.state.delete,
+                mode: false,
+                email: "",
+            }
         })
+    }
+
+    private ChildButton = (parentName: string, args: string) => {
+        this.resetAllState()
         let selectDisplay = ""
         args.split(" ").forEach((s) => selectDisplay += s.charAt(0).toUpperCase() + s.slice(1))
         const matchIndex = /[^A-Za-z]/.exec(selectDisplay)
@@ -374,13 +396,13 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
     private async changeAddInput(e: React.FormEvent<HTMLInputElement>, key: string) {
         if (e !== null && key !== null) {
-            e?.preventDefault()
+            e.preventDefault()
             this.setState({
                 universalInputData: {
                     ...this.state.universalInputData,
                     input: {
                         ...this.state.universalInputData.input,
-                        [key]: [e?.currentTarget.value.trim(), false]
+                        [key]: [e.currentTarget.value.trim(), false]
                     }
                 }
             }, () => {
@@ -405,12 +427,39 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         }
     }
 
+    private emitToast(param: string) {
+        if(param.includes("failed")) {
+            toast.error(param, {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                theme: "colored",
+            });
+        } else {
+            toast.success(param, {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                theme: "colored",
+            });
+        }
+    }
+
     private async universalButton(method: string) {
         if (email !== null) {
             const listBool: boolean[] = []
             Object.keys(this.state.universalInputData.input).forEach(
                 k => listBool.push(this.state.universalInputData.input[k as keyof BackOfficeStates["universalInputData"]["input"]][1] as any as boolean)
             )
+            if (method === "Edit" && !this.state.universalInputData.editPassword) {
+                listBool[1] = true
+            }
             if (listBool.every((el: any) => el === true)) {
                 const addEditUrl = (this.state.selected.role === "user" && method === "Add")
                     ? "http://localhost:8080/addUser"
@@ -421,15 +470,18 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                             : (this.state.selected.role === "admin" && method === "Edit")
                                 ? "http://localhost:8080/editAdmin"
                                 : "";
+                
                 this.setState({
                     universalInputData: {
                         ...this.state.universalInputData,
                         loading: true
                     }
                 })
+
                 const addEditResponse: any = await fetch(addEditUrl, Config("POST", { adminEmail: JSON.parse(email).email, addEditData: { ...this.sendData() } }))
                     .then(res => res.json())
                     .then(data => data)
+
                 if (addEditResponse !== null) {
                     this.assignPagination()
                     this.setState({
@@ -439,6 +491,19 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                             msg: addEditResponse.msg
                         }
                     }, () => {
+                        if (method === "Add") {
+                            this.setState({
+                                universalInputData: {
+                                    ...this.state.universalInputData,
+                                    input: { ...initialInput },
+                                }
+                            })
+                        } else {
+                            this.setState({
+                                editMode: false,
+                            })
+                        }
+                        this.emitToast(this.state.universalInputData.msg)
                         this.assignPagination()
                         this.changePagination(this.state.pagination.currentPagination)
                     })
@@ -448,12 +513,6 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
     }
 
     private async universalTableAction(action: string, uid: string, paramData: deleteStructure) {
-        this.setState({
-            universalInputData: {
-                ...this.state.universalInputData,
-                msg: "",
-            }
-        })
         if (action === "edit") {
             if (!this.state.editMode && uid !== "") {
                 const nameColumn = this.state.selected.role === "user"
@@ -489,35 +548,51 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         }
 
         if (action === "delete" && paramData !== null) {
+            this.resetAllState()
             this.setState({
-                data: {
-                    ...this.state.data,
-                    loading: true,
+                delete: {
+                    ...this.state.delete,
+                    email: paramData.email,
+                    mode: true,
+                    data: { ...paramData },
                 }
             })
-            if (email !== null) {
-                const deleteUrl = paramData.role === "user"
-                    ? "http://localhost:8080/deleteUser"
-                    : "http://localhost:8080/deleteAdmin"
-                const deleteRes = await fetch(deleteUrl, Config("POST", { adminEmail: JSON.parse(email).email, deleteData: { ...paramData } }))
-                    .then(res => res.json())
-                    .then(data => data)
-                if(deleteRes !== null) {
-                    this.setState({
-                        data: {
-                            ...this.state.data,
-                            loading: false,
-                            msg: deleteRes.msg
-                        },
-                        pagination: {
-                            ...this.state.pagination,
-                            paginationScope: [1, 5]
-                        }
-                    }, () => {
-                        this.changePagination(0)
-                        this.assignPagination()
-                    })
-                }
+        }
+    }
+
+    private async universalDeleteFunction() {
+        this.resetAllState()
+        const paramData: deleteStructure = this.state.delete.data
+        this.setState({
+            data: {
+                ...this.state.data,
+                loading: true,
+            },
+        })
+        if (email !== null) {
+            const deleteUrl = paramData.role === "user"
+                ? "http://localhost:8080/deleteUser"
+                : "http://localhost:8080/deleteAdmin"
+            console.log(deleteUrl)
+            const deleteRes = await fetch(deleteUrl, Config("POST", { adminEmail: JSON.parse(email).email, deleteData: { ...paramData } }))
+                .then(res => res.json())
+                .then(data => data)
+            if (deleteRes !== null) {
+                this.setState({
+                    data: {
+                        ...this.state.data,
+                        loading: false,
+                        msg: deleteRes.msg
+                    },
+                    pagination: {
+                        ...this.state.pagination,
+                        paginationScope: [1, 5]
+                    }
+                }, () => {
+                    this.emitToast(this.state.data.msg)
+                    this.changePagination(0)
+                    this.assignPagination()
+                })
             }
         }
     }
@@ -526,8 +601,11 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         interface passedParameter {
             paramFor: string,
             dataState: BackOfficeStates["universalInputData"],
+            editPassword: boolean,
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
-            universalEditSendButton: (methodParam: string) => void
+            universalEditSendButton: (methodParam: string) => void,
+            changePasswordMode: (checkboxValue: boolean) => void,
+
         }
 
         const buttonList = Object.keys(this.state.buttonBackOfficeList)
@@ -537,7 +615,15 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             paramFor: childAddDisplay,
             dataState: this.state.universalInputData,
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => this.changeAddInput(e, key),
-            universalEditSendButton: (methodParam: string) => this.universalButton(methodParam)
+            universalEditSendButton: (methodParam: string) => this.universalButton(methodParam),
+            editPassword: this.state.universalInputData.editPassword,
+            changePasswordMode: (checkboxValue) => this.setState({
+                universalInputData: {
+                    ...this.state.universalInputData,
+                    editPassword: checkboxValue,
+                    msg: "",
+                }
+            })
         }
 
         let selectedElement: any = <Fragment />
@@ -550,6 +636,17 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
         return (
             <div className='hideOverflow'>
+                <ToastContainer
+                    position="top-right"
+                    autoClose={5000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                />
                 <Row>
                     <Col lg="3" className='divMargin buttonStyle' key="tes">
                         {
@@ -609,8 +706,57 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                                             )
                                 }
                                 {
-                                    this.state.data.msg.length > 0
-                                        ? <CardTitle className='deleteMessage'>{this.state.data.msg}</CardTitle>
+                                    this.state.delete.mode
+                                        ? (
+                                            <Modal
+                                                centered
+                                                toggle={() => {
+                                                    this.setState({
+                                                        delete: {
+                                                            ...this.state.delete,
+                                                            mode: false
+                                                        }
+                                                    })
+                                                }}
+                                                isOpen={true}
+                                            >
+                                                <ModalHeader toggle={() => {
+                                                    this.setState({
+                                                        delete: {
+                                                            ...this.state.delete,
+                                                            mode: false
+                                                        }
+                                                    })
+                                                }}>
+                                                    Confirmation
+                                                </ModalHeader>
+                                                <ModalBody>
+                                                    {`Are you sure to delete "${this.state.delete.data.email} from database ?"`}
+                                                </ModalBody>
+                                                <ModalFooter>
+                                                    <Button
+                                                        color="danger"
+                                                        onClick={() => this.universalDeleteFunction()}
+                                                    >
+                                                        Yes
+                                                    </Button>
+                                                    <Button
+                                                        color="info"
+                                                        onClick={() => this.setState({
+                                                            delete: {
+                                                                ...this.state.delete,
+                                                                mode: false
+                                                            }
+                                                        })}
+                                                        style={{
+                                                            color: "white"
+                                                        }}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </ModalFooter>
+                                            </Modal>
+                                        )
                                         : <Fragment />
                                 }
                             </div>

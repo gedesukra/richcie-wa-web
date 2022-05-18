@@ -11,6 +11,23 @@
     overflow-x: hidden;
 }
 
+.deleteConfirm {
+    text-align: center;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    font-size: 3vh;
+    text-transform: uppercase;
+    border: 2px solid red;
+}
+
+.deleteConfirmButton {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
 .deleteMessage {
     text-align: center;
     display: block;

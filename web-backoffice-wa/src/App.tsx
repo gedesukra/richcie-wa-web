@@ -1,4 +1,4 @@
-import { Component, ReactNode } from 'react'
+import React, { Component, ReactNode } from 'react'
 import {
   BrowserRouter,
   Routes,
@@ -24,12 +24,14 @@ interface AppProps {
 
 interface AppStates {
   validate: boolean,
+  adminAuth: boolean,
 }
 
 class App extends Component<AppProps, AppStates> {
   public state = {
     validate: false,
     adminAuth: false,
+
   }
 
   public async componentDidMount() {

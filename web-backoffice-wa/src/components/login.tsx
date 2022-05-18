@@ -57,9 +57,7 @@ class LoginComponent extends Component<LoginProps, LoginState> {
     if (
       this.state.emailValid !== nextStates.emailValid ||
       this.state.loading !== nextStates.loading ||
-      this.state.passwordDirty !== nextStates.passwordDirty ||
-      {...this.state.loginResponse} !== {...nextStates.loginResponse} ||
-      {...this.state.loginData} !== {...nextStates.loginData}
+      this.state.passwordDirty !== nextStates.passwordDirty
     ) {
       return true
     }

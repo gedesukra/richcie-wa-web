@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import React, { Fragment } from 'react'
 import { Button } from 'reactstrap'
 
 import '../css/containers/backoffice-drawer.css'
@@ -16,8 +16,8 @@ interface childButton {
     childEmit: (parent:string, child: string) => void
   ) {
   const childButton: childButton = {
-    "User": [argsBool, ["List user", "Add user", "Edit user", "Delete user"]],
-    "UserAdmin": [argsBool, ["List user admin", "Add user admin", "Edit user admin", "Delete user admin"]],
+    "User": [argsBool, ["List user", "Add user"]],
+    "UserAdmin": [argsBool, ["List user admin", "Add user admin"]],
     "Dashboard": [argsBool, ["Show online user", "Remove online user (logout user)"]],
     "Logout": [false, []],
   }

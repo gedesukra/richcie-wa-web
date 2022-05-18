@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import React, { Fragment } from 'react'
 import { Spinner, Table, Button } from 'reactstrap'
 import '../css/containers/universalTable.css'
 
@@ -6,11 +6,11 @@ interface deleteStructure {
     uid: string,
     username: string,
     role: string,
+    email: string,
 }
 
 function universalTable(
     paramFor: string,
-    action: string, 
     displayData: Array<string>, 
     loading: boolean,
     tableActionButton: (methodParam: string, uid: string, deleteData: deleteStructure) => void,
@@ -26,7 +26,7 @@ function universalTable(
 
     return (
         <Fragment>
-            {action} {paramFor} that registered on whatsapp app
+            {paramFor} that registered on whatsapp app
             <div className='userListTable'>
                 {
                     loading
@@ -40,27 +40,36 @@ function universalTable(
                             >
                                 <thead>
                                     <tr>
-                                        {Object.keys(JSON.parse(displayData[0])).map((key) => <th key={key} style={{ textAlign: "center" }}>{key}</th>)}
+                                        {
+                                            Object.keys(JSON.parse(displayData[0])).map(
+                                                (key) => {
+                                                    if(key !== "id") {
+                                                        return(
+                                                            <th key={key} style={{ textAlign: "center" }}>{key}</th>
+                                                        )
+                                                    }
+                                                    return <Fragment key={key} />
+                                                })
+                                        }
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {displayData.map((elObject: string, index: number) => {
                                         const displayObject: any = JSON.parse(elObject) as userDataStructure
-                                        displayObject.action = action
+                                        const username = paramFor === "user" ? displayObject.username : displayObject.adminname
                                         return (
                                             <tr key={index} className='userListTableData'>
                                                 {
-                                                    paramFor === "user" 
-                                                        ? <></>
-                                                        : <td>
-                                                            {displayObject.id}
-                                                        </td>
+                                                    paramFor === "admin"
+                                                        ? (
+                                                            <td>
+                                                                {JSON.stringify(displayObject.authenticated)}
+                                                            </td>
+                                                        )
+                                                        : <Fragment />
                                                 }
                                                 <td>
-                                                    {paramFor === "user" ? displayObject.id : JSON.stringify(displayObject.authenticated)}
-                                                </td>
-                                                <td>
-                                                    {paramFor === "user" ? displayObject.username : displayObject.adminname}
+                                                    {username}
                                                 </td>
                                                 <td>
                                                     {displayObject.email}
@@ -74,25 +83,34 @@ function universalTable(
                                                 <td>
                                                     {displayObject.updated}
                                                 </td>
-                                                {
-                                                    displayObject.action !== "list" 
-                                                        ? (
-                                                            <td>
-                                                                <Button 
-                                                                    color={displayObject.action === "delete" ? "danger" : "info"}
-                                                                    style={{color: "white", textTransform: "uppercase"}}
-                                                                    onClick={() => tableActionButton(displayObject.action, displayObject.id, {
-                                                                        uid: displayObject.id,
-                                                                        username: displayObject.username,
-                                                                        role: paramFor,
-                                                                    })}
-                                                                >
-                                                                    {displayObject.action}
-                                                                </Button>
-                                                            </td>
-                                                        ) : <></>
-                                                }
-                                                
+                                                <td>
+                                                    <Button 
+                                                        color="info"
+                                                        style={{color: "white", textTransform: "uppercase"}}
+                                                        onClick={() => tableActionButton("edit", displayObject.id, {
+                                                            uid: displayObject.id,
+                                                            username: username,
+                                                            role: paramFor,
+                                                            email: displayObject.email,
+                                                        })}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                </td>
+                                                <td>
+                                                    <Button 
+                                                        color="danger"
+                                                        style={{color: "white", textTransform: "uppercase"}}
+                                                        onClick={() => tableActionButton("delete", displayObject.id, {
+                                                            uid: displayObject.id,
+                                                            username: username,
+                                                            role: paramFor,
+                                                            email: displayObject.email,
+                                                        })}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </td>
                                             </tr>
                                         )
                                     })}

@@ -1,5 +1,7 @@
-import { Fragment } from 'react'
-import { Spinner, Table, Button, Input, CardTitle } from 'reactstrap'
+import React, { Fragment } from 'react'
+import { Spinner, Button, Input, CardTitle } from 'reactstrap'
+
+import '../css/universalInput.css'
 
 interface AddUser {
     input: {
@@ -15,8 +17,10 @@ interface AddUser {
 interface passedParameter {
     paramFor: string,
     dataState: AddUser,
+    editPassword: boolean,
     changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
-    universalEditSendButton: (methodParam: string) => void
+    universalEditSendButton: (methodParam: string) => void,
+    changePasswordMode: (checkboxValue: boolean) => void,
 }
 
 function universalInput(
@@ -45,31 +49,46 @@ function universalInput(
                                     )
                                 }
                                 return (
-                                    <Input
-                                        key={el}
-                                        required
-                                        aria-required
-                                        className='inputDiv'
-                                        placeholder={el} 
-                                        value={parameterObject.dataState.input[el as keyof AddUser["input"]][0]} 
-                                        onChange={(e) => parameterObject.changeInput(e, el)}
-                                        invalid={!parameterObject.dataState.input[el as keyof AddUser["input"]][1] as any as boolean}
-                                        type={
-                                            el === "password" 
-                                                ? "password"
-                                                : "text"
+                                    <div key={el}>
+                                        <Input
+                                            required
+                                            aria-required
+                                            className='inputDiv'
+                                            placeholder={el} 
+                                            value={parameterObject.dataState.input[el as keyof AddUser["input"]][0]} 
+                                            onChange={(e) => parameterObject.changeInput(e, el)}
+                                            invalid={!parameterObject.dataState.input[el as keyof AddUser["input"]][1] as any as boolean}
+                                            type={
+                                                el === "password" 
+                                                    ? "password"
+                                                    : "text"
+                                            }
+                                            style={{
+                                                "textTransform": el === "email"
+                                                    ? "lowercase"
+                                                    : "none"
+                                            }}
+                                        />
+                                        {
+                                            !parameterObject.dataState.input[el as keyof AddUser["input"]][1] as any as boolean
+                                                ? <p style={{"color": "red"}}>{el} tidak valid / tidak boleh kosong !</p>
+                                                : <Fragment />
                                         }
-                                        style={{
-                                            "textTransform": el === "email"
-                                                ? "lowercase"
-                                                : "none"
-                                        }}
-                                    />
+                                    </div>
                                 )
                             })
                         )
                 }
-                {parameterObject.dataState.msg.length > 0 ? <CardTitle className='successMessage'>{parameterObject.dataState.msg}</CardTitle> : <></>}
+                {
+                    methodArgs === "Edit"
+                        ? (
+                            <div className='divChecbox'>
+                                <Input className='passwordCheckbox' type="checkbox" onChange={(e: React.ChangeEvent<HTMLInputElement>) => parameterObject.changePasswordMode(e.target.checked)} checked={parameterObject.editPassword} />
+                                <h4 className='passwordCheckParagraph'>Edit password for {parameterObject.paramFor}</h4>
+                            </div>
+                        )
+                        : <Fragment />
+                }
                 <Button 
                     color='primary' 
                     className='userAddButton' 

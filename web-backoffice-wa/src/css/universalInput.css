@@ -1,0 +1,13 @@
+.divChecbox {
+    margin-top: 2vw;
+}
+
+.passwordCheckbox {
+    display: inline-block;
+    margin-top: 1vh;
+}
+
+.passwordCheckParagraph {
+    display: inline-block;
+    margin-left: 1vw;
+}
