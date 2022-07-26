@@ -66,7 +66,7 @@ class LoginComponent extends Component<LoginProps, LoginState> {
 
   private async login() {
     const regexp: RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-    const url = "http://localhost:8080/loginAdmin"
+    const url = "http://localhost:8080/bo/loginAdmin"
     if (regexp.test(this.state.loginData.email) && this.state.loginData.password.length > 0) {
       this.setState({
         loading: true,

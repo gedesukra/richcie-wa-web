@@ -23,6 +23,7 @@ function universalTable(
         created: string,
         updated: string,
     }
+    const avatarUrl: String = "http://localhost:8080/img/";
 
     return (
         <Fragment>
@@ -66,7 +67,17 @@ function universalTable(
                                                                 {JSON.stringify(displayObject.authenticated)}
                                                             </td>
                                                         )
-                                                        : <Fragment />
+                                                        : (
+                                                            <td>
+                                                                <img src={avatarUrl + displayObject.avatar + ".jpg"} style={{
+                                                                    width: 45,
+                                                                    height: 45,
+                                                                    borderRadius: "50%",
+                                                                    verticalAlign: "middle",
+                                                                    objectFit: 'scale-down',
+                                                                }} />
+                                                            </td>
+                                                        )
                                                 }
                                                 <td>
                                                     {username}

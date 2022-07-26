@@ -36,7 +36,7 @@ class App extends Component<AppProps, AppStates> {
 
   public async componentDidMount() {
     const userEmail = localStorage.getItem("email")
-    const url = "http://localhost:8080/adminAuth"
+    const url = "http://localhost:8080/bo/adminAuth"
     if(userEmail !== null) {
       const boolUserAuth = await fetch(url, Config("POST", JSON.parse(userEmail)))
         .then(res => res.json())
@@ -62,7 +62,7 @@ class App extends Component<AppProps, AppStates> {
 
   private async Logout(args: boolean) {
     const userAuth = localStorage.getItem("email")
-    const url = "http://localhost:8080/logoutAdmin"
+    const url = "http://localhost:8080/bo/logoutAdmin"
     if(userAuth !== null) {
       const logoutSuccess = await fetch(url, Config("POST", JSON.parse(userAuth)))
         .then(res => res.json())

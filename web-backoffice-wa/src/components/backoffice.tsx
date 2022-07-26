@@ -1,4 +1,5 @@
 import React, { Component, Fragment, ReactNode } from 'react'
+import axios from 'axios';
 import { Row, Col, Card, CardTitle, Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'
 import { ToastContainer, toast } from 'react-toastify';
 
@@ -17,16 +18,15 @@ import '../css/components/backoffice.css'
 import 'react-toastify/dist/ReactToastify.css';
 
 const email = localStorage.getItem("email")
-const url = "http://localhost:8080/getUsername"
-const getUserListWithScope = "http://localhost:8080/getUserListWithScope"
-const getAdminListWithScope = "http://localhost:8080/getAdminListWithScope"
-const getUserListLength = "http://localhost:8080/getUserListLength"
-const getAdminListLength = "http://localhost:8080/getAdminListLength"
+const getAdminUsername = "http://localhost:8080/bo/getUsername"
+const getUniversalListLength = "http://localhost:8080/bo/getUniversalListLength"
+const getUniversalListWithScope = "http://localhost:8080/bo/getUniversalListWithScope"
 const initialInput = {
     email: ["", false],
     password: ["", false],
     username: ["", false],
     gender: ["Male", true],
+    avatar: [ new FormData(), true],
 }
 
 interface deleteStructure {
@@ -92,6 +92,7 @@ interface BackOfficeStates {
         selectedIndex: number,
         loading: boolean,
         msg: string,
+        editAvatar: boolean,
         editPassword: boolean,
     },
     delete: {
@@ -140,6 +141,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             selectedIndex: -1,
             loading: false,
             msg: "",
+            editAvatar: false,
             editPassword: false,
         },
         delete: {
@@ -155,43 +157,39 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
         loading: true,
         displayUsername: "",
         editMode: false,
-
     }
 
-    private urlList = () => this.state.selected.role === "admin"
-        ? getAdminListWithScope
-        : getUserListWithScope
-
-    private urlListLength = () => this.state.selected.role === "admin"
-        ? getAdminListLength
-        : getUserListLength
-
     private sendData = () => {
+        // console.log(((this.state.universalInputData.input.avatar[0] as FormData).get("avatar") as File).size > 0)
         if (this.state.universalInputData.selectedIndex < 0) {
             return ({
+                "avatar": this.state.universalInputData.input.avatar[0],
                 "email": this.state.universalInputData.input.email[0],
                 "password": this.state.universalInputData.input.password[0],
                 "username": this.state.universalInputData.input.username[0],
                 "gender": this.state.universalInputData.input.gender[0],
+                "role": this.state.selected.role,
             })
         }
         return ({
             "uid": JSON.parse(this.state.data.userList[this.state.universalInputData.selectedIndex]).id,
+            "avatar": this.state.universalInputData.input.avatar[0],
             "email": this.state.universalInputData.input.email[0],
             "password": this.state.universalInputData.input.password[0],
             "username": this.state.universalInputData.input.username[0],
             "gender": this.state.universalInputData.input.gender[0],
+            "role": this.state.selected.role,
         })
     }
 
     private async assignPagination() {
         if (email !== null) {
             // get whatsapp user list
-            const universalListData = await fetch(this.urlList(), Config("POST", { email: JSON.parse(email).email, pagScope: this.state.pagination.paginationScope }))
+            const universalListData = await fetch(getUniversalListWithScope, Config("POST", { role: this.state.selected.role, email: JSON.parse(email).email, pagScope: this.state.pagination.paginationScope }))
                 .then(res => res.json())
                 .then(data => data)
 
-            const universalPaginationLength = await fetch(this.urlListLength(), Config("POST", { email: JSON.parse(email).email }))
+            const universalPaginationLength = await fetch(getUniversalListLength, Config("POST", { role: this.state.selected.role, email: JSON.parse(email).email }))
                 .then(data => data.json())
                 .then(res => res)
 
@@ -220,7 +218,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
     private async setUsernameAdmin() {
         if (email !== null) {
-            const getUsernameAdmin = await fetch(url, Config("POST", { email: JSON.parse(email).email }))
+            const getUsernameAdmin = await fetch(getAdminUsername, Config("POST", { email: JSON.parse(email).email }))
                 .then(res => res.json())
             if (getUsernameAdmin !== null) {
                 this.setState({
@@ -272,6 +270,8 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 ...this.state.universalInputData,
                 input: initialInput,
                 msg: "",
+                editPassword: false,
+                editAvatar: false,
             },
             editMode: false,
             delete: {
@@ -321,7 +321,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
 
     private async updateUserData(scope: number[]): Promise<Array<string>> {
         if (email !== null) {
-            const updateData: any = fetch(this.urlList(), Config("POST", { email: JSON.parse(email).email, pagScope: scope }))
+            const updateData: any = fetch(getUniversalListWithScope, Config("POST", { role: this.state.selected.role, email: JSON.parse(email).email, pagScope: scope }))
                 .then(res => res.json())
                 .then(data => data)
             return updateData
@@ -397,37 +397,75 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
     private async changeAddInput(e: React.FormEvent<HTMLInputElement>, key: string) {
         if (e !== null && key !== null) {
             e.preventDefault()
-            this.setState({
-                universalInputData: {
-                    ...this.state.universalInputData,
-                    input: {
-                        ...this.state.universalInputData.input,
-                        [key]: [e.currentTarget.value.trim(), false]
-                    }
-                }
-            }, () => {
-                let checkBoolean: boolean
-                if (key === "email" && key !== null) {
-                    const emailRegexp: RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-                    checkBoolean = emailRegexp.test(this.state.universalInputData.input.email[0] as string)
-                } else {
-                    const inputValid = this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0] as string
-                    checkBoolean = inputValid.length > 0
-                }
+            if (key === "avatar") {
+                const image = e.currentTarget.files![0]
+                const storedImageFiles = new FormData()
+                storedImageFiles.append("avatar", image)
                 this.setState({
                     universalInputData: {
                         ...this.state.universalInputData,
                         input: {
                             ...this.state.universalInputData.input,
-                            [key]: [this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0], checkBoolean]
+                            avatar: [this.state.universalInputData.input.avatar[0], this.state.universalInputData.input.avatar[1]]
                         }
                     }
+                }, () => {
+                    try {
+                        const validImage = image.name !== ""
+                        this.setState({
+                            universalInputData: {
+                                ...this.state.universalInputData,
+                                input: {
+                                    ...this.state.universalInputData.input,
+                                    [key]: [storedImageFiles, validImage]
+                                }
+                            }
+                        })
+                    } catch(_) {
+                        this.setState({
+                            universalInputData: {
+                                ...this.state.universalInputData,
+                                input: {
+                                    ...this.state.universalInputData.input,
+                                    [key]: [storedImageFiles, false]
+                                }
+                            }
+                        })
+                    }
                 })
-            })
+            } else {
+                this.setState({
+                    universalInputData: {
+                        ...this.state.universalInputData,
+                        input: {
+                            ...this.state.universalInputData.input,
+                            [key]: [e.currentTarget.value.trim(), false]
+                        }
+                    }
+                }, () => {
+                    let checkBoolean: boolean
+                    const inputValid = this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0] as string
+                    checkBoolean = inputValid.length > 0
+                    if (key === "email" && key !== null) {
+                        const emailRegexp: RegExp = new RegExp(/^(([^<>()\]\\.,;:\s@"]+(\.[^<>()\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+                        checkBoolean = emailRegexp.test(this.state.universalInputData.input.email[0] as string)
+                    } 
+                    this.setState({
+                        universalInputData: {
+                            ...this.state.universalInputData,
+                            input: {
+                                ...this.state.universalInputData.input,
+                                [key]: [this.state.universalInputData.input[key as keyof BackOfficeStates["universalInputData"]["input"]][0], checkBoolean]
+                            }
+                        }
+                    })
+                })
+            } 
         }
     }
 
     private emitToast(param: string) {
+        console.log(param)
         if(param.includes("failed")) {
             toast.error(param, {
                 position: "top-right",
@@ -461,15 +499,9 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 listBool[1] = true
             }
             if (listBool.every((el: any) => el === true)) {
-                const addEditUrl = (this.state.selected.role === "user" && method === "Add")
-                    ? "http://localhost:8080/addUser"
-                    : (this.state.selected.role === "user" && method === "Edit")
-                        ? "http://localhost:8080/editUser"
-                        : (this.state.selected.role === "admin" && method === "Add")
-                            ? "http://localhost:8080/addAdmin"
-                            : (this.state.selected.role === "admin" && method === "Edit")
-                                ? "http://localhost:8080/editAdmin"
-                                : "";
+                const addEditUrl = method === "Add"
+                    ? "http://localhost:8080/bo/addUniversal"
+                    : "http://localhost:8080/bo/editUniversal"
                 
                 this.setState({
                     universalInputData: {
@@ -478,17 +510,63 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                     }
                 })
 
-                const addEditResponse: any = await fetch(addEditUrl, Config("POST", { adminEmail: JSON.parse(email).email, addEditData: { ...this.sendData() } }))
+                const addEditResponse: any = {
+                    res: "",
+                    avatarRes: ""
+                }
+                if(method === "Add") {
+                    addEditResponse.res = await fetch(addEditUrl, Config(
+                        "POST", 
+                        {adminEmail: JSON.parse(email).email, addEditData: {...this.sendData()}}
+                        )
+                    )
+                    .then(res => res.json())
+                    .then(data => data)
+                } else {
+                    addEditResponse.res = await fetch(addEditUrl, Config(
+                        "POST", 
+                        {adminEmail: JSON.parse(email).email, addEditData: {...this.sendData()}}
+                        )
+                    )
                     .then(res => res.json())
                     .then(data => data)
 
-                if (addEditResponse !== null) {
+                    if((this.state.universalInputData.input.avatar[0] as FormData).has("avatar")) {
+                        const avatarUpload = await axios.post(
+                            "http://localhost:8080/bo/editUserAvatar",
+                            this.state.universalInputData.input.avatar[0] as FormData,
+                            {
+                                headers: {'Content-Type': 'multipart/form-data'},
+                            }
+                        )
+                        console.log(avatarUpload)
+                    }
+
+                    // await fetch("http://localhost:8080/bo/editUserAvatar", Config(
+                    //     "POST", 
+                    //     this.state.universalInputData.input.avatar[0] as FormData,
+                    //     {'Content-Type': 'multipart/form-data'}
+                    //     )
+                    // )
+                    // .then(res => res.json())
+                    // .then(data => data)
+                }
+
+                if (
+                    addEditResponse.res !== ""
+                ) {
                     this.assignPagination()
                     this.setState({
                         universalInputData: {
                             ...this.state.universalInputData,
                             loading: false,
-                            msg: addEditResponse.msg
+                            msg: method === "Add"
+                            ? addEditResponse.res['msg']
+                            : addEditResponse.avatarRes !== "" && addEditResponse.avatarRes['msg'].includes("failed")
+                                ? `${addEditResponse.res['msg']}, but ${addEditResponse.avatarRes['msg']}`
+                                : addEditResponse.avatarRes !== "" && !addEditResponse.avatarRes['msg'].includes("failed") 
+                                    ? `${addEditResponse.res['msg']}, and ${addEditResponse.avatarRes['msg']}`
+                                    : `${addEditResponse.res['msg']}`
                         }
                     }, () => {
                         if (method === "Add") {
@@ -501,6 +579,15 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                         } else {
                             this.setState({
                                 editMode: false,
+                                universalInputData: {
+                                    ...this.state.universalInputData,
+                                    input: {
+                                        ...this.state.universalInputData.input,
+                                        avatar: [new FormData(), true]
+                                    },
+                                    editPassword: false,
+                                    editAvatar: false,
+                                }
                             })
                         }
                         this.emitToast(this.state.universalInputData.msg)
@@ -543,7 +630,15 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
                 })
             }
             this.setState({
-                editMode: !this.state.editMode
+                editMode: !this.state.editMode,
+            }, () => {
+                this.setState({
+                    universalInputData: {
+                        ...this.state.universalInputData,
+                        editPassword: false,
+                        editAvatar: false
+                    }
+                })
             })
         }
 
@@ -570,10 +665,7 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             },
         })
         if (email !== null) {
-            const deleteUrl = paramData.role === "user"
-                ? "http://localhost:8080/deleteUser"
-                : "http://localhost:8080/deleteAdmin"
-            console.log(deleteUrl)
+            const deleteUrl = "http://localhost:8080/bo/deleteUniversal"
             const deleteRes = await fetch(deleteUrl, Config("POST", { adminEmail: JSON.parse(email).email, deleteData: { ...paramData } }))
                 .then(res => res.json())
                 .then(data => data)
@@ -602,10 +694,11 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             paramFor: string,
             dataState: BackOfficeStates["universalInputData"],
             editPassword: boolean,
+            editAvatar: boolean,
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
             universalEditSendButton: (methodParam: string) => void,
             changePasswordMode: (checkboxValue: boolean) => void,
-
+            changeAvatarMode: (checkboxValue: boolean) => void,
         }
 
         const buttonList = Object.keys(this.state.buttonBackOfficeList)
@@ -617,10 +710,22 @@ class BackOffice extends Component<BackOfficeProps, BackOfficeStates> {
             changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => this.changeAddInput(e, key),
             universalEditSendButton: (methodParam: string) => this.universalButton(methodParam),
             editPassword: this.state.universalInputData.editPassword,
+            editAvatar: this.state.universalInputData.editAvatar,
             changePasswordMode: (checkboxValue) => this.setState({
                 universalInputData: {
                     ...this.state.universalInputData,
                     editPassword: checkboxValue,
+                    msg: "",
+                }
+            }),
+            changeAvatarMode: (checkboxValue) => this.setState({
+                universalInputData: {
+                    ...this.state.universalInputData,
+                    input : {
+                        ...this.state.universalInputData.input,
+                        avatar: [this.state.universalInputData.input.avatar[0] as FormData, !checkboxValue]
+                    },
+                    editAvatar: checkboxValue,
                     msg: "",
                 }
             })

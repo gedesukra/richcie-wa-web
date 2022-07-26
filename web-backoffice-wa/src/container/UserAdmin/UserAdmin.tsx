@@ -8,6 +8,7 @@ interface AddUserStruct {
         password: any[],
         username: any[],
         gender: any[],
+        avatar: any[],
     },
     loading: boolean,
     msg: string,
@@ -17,9 +18,11 @@ interface passedParameter {
     paramFor: string,
     dataState: AddUserStruct,
     editPassword: boolean,
+    editAvatar: boolean,
     changeInput: (e: React.FormEvent<HTMLInputElement>, key: string) => void,
     universalEditSendButton: (methodParam: string) => void,
     changePasswordMode: (checkboxValue: boolean) => void,
+    changeAvatarMode: (checkBoxValue: boolean) => void,
 }
 
 interface deleteStructure {

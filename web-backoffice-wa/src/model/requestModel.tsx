@@ -7,18 +7,23 @@ interface requestStructure {
     body?: string
 }
 
-let baseStructure : requestStructure  = {
+const baseStructure : requestStructure  = {
     method: "",
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        // 'Content-Type': 'multipart/form-data',
     },
 }
 
-let requestConfig = (argMethod: string, data?: object) : requestStructure => {
+let requestConfig = (argMethod: string, data?: object, customHeaders?: object) : requestStructure => {
     if(argMethod === "POST") {
         return {
             ...baseStructure,
+            headers: {
+                ...baseStructure.headers,
+                ...customHeaders,
+            },
             method: argMethod,
             body: JSON.stringify({
                 ...data
